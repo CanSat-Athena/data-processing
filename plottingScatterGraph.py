@@ -58,7 +58,7 @@ def parse_json(json_data):
     parsed_data = parse_recursive(json_data, data_types)
     return parsed_data
 
-# Example usage
+
 
 f = open("package.json")
 json_data = json.load(f)
