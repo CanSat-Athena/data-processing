@@ -1,3 +1,0 @@
-Light 55 19:22
-Temperature 77 16:32
-AirPressure 2 15:77
