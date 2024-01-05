@@ -1,0 +1,76 @@
+{
+  "timestamp": {
+    "time": [1234560]
+  },
+  "imu": {
+    "accel": [
+      [
+        456,
+        345,
+        345
+      ],
+      [
+        245,
+        24,
+        245
+      ]
+    ],
+    "gyro": [
+      [
+        456,
+        345,
+        345
+      ],
+      [
+        245,
+        24,
+        245
+      ]
+    ]
+  },
+  "dht": {
+    "dht_temp": [
+      15.45235,
+      16.23525
+    ],
+    "dht_humidity": [
+      50.42,
+      50.36
+    ]
+  },
+  "bme": {
+    "bme_temp": [
+      15.45235,
+      16.23525
+    ],
+    "bme_humidity": [
+      50.42,
+      50.36
+    ],
+    "bme_pressure": [
+      50.42,
+      50.36
+    ],
+      "ppm": [50.3],
+      "airQuality": [46],
+      "heaterTemp": [100]
+  },
+  "anemometer": {
+    "windSpeed":[5]
+  },
+  "gps": {
+    "absoluteTimestamp": [6929593691],
+    "latitude": [50.423456266],
+    "longitude": [0.02576553],
+    "altitude": [250],
+    "bearing": [20],
+    "speed": [12],
+    "satellites": [3],
+    "fix": [1],
+    "quality": [1]
+  },
+  "computed": {
+    "hasLanded": false,
+    "hasReachedTerminal": false
+  }
+}
