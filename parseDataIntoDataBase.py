@@ -62,7 +62,7 @@ def update_imu_table(connection, data_type, reading_value, reading_time):
     cursor = connection.cursor()
 
     add_row_sql = ''' INSERT INTO imuSensors(Data_Type, Reading_Value,Timestamps)
-                  VALUES(?,?,?) '''
+                     VALUES(?,?,?) '''
 
     for item in reading_value:
         cursor.execute(add_row_sql, (data_type, item , reading_time))
