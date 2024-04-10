@@ -1,86 +1,254 @@
-import csv
-import sqlite3
-from datetime import timezone, datetime    
-import os
+import sqlite3 as sql
+import csv as csv
+import math as math
+import imufusion as imufusion
+import numpy as np
+import os as os
 
+get_time = lambda fn: os.path.getmtime(fn)
 
-global_data_list = []
-previous_rows = []
+true = True
+false = False       #                                                             g   degPerSecond ut                      
+                    #msSinceBoot,dhtTemp,dhtHum,bmeTemp,bmeHum,bmePres,bmeGaRe,imuAccel,imuGyro,imuMag,Light,Wind,lat,long,alt,gpsTime,gpsFix,batVolt,batPerc,fsUsa,fsSize,RSSI
+transmitted_data_list = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+no_items_in_section = [1,2,4,9,1,1,7,2,2,1]
+transimtted_data_place_in_array = [[0],[1,2],[3,4,5,6],[7,7,7,8,8,8,9,9,9],[10],[11],[12,13,14,15,15,15,16],[17,18],[19,20],[21]]
+lines_parsed = -1
+final_converted_list = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+final_converted_list_names = ["timestamp", "dhtTemp", "dhtHum", "bmeTemp", "bmeHum", "bmePres", "bmeGasRe", "imuAccel", "imuGyro", "imuMag", "eulerAngle", "ldrVoltage", "ldrLux", "ldrSolarIraddiance", "windTriggers", "windSpeed", "windSpeed90", "lat", "long", "alt", "fix", "batVolt", "batPerc", "fsUsa", "fsSize", "RSSI","alt_calc"] 
+print(len(final_converted_list_names))
 
+def ldr_voltage_to_lux(voltage_transmitted):
+    voltage  = (int(voltage_transmitted)/4095) * 3.3
+    resistance = voltage/2 
+    lux = resistance * 10
+    return lux
 
-def create_connection(data_text_file):
-    connection = sqlite3.connect(data_text_file)
-    return connection
+def lux_to_solar_irradiance(lux):
+    solar_irradiance = lux * 0.0079
+    return solar_irradiance
 
-def row_to_array():
-    with open("readings.csv",'r') as csv_file:
-        reader = csv.reader(csv_file)
-        for row in reader:
-            inData = False
-            element_counter = 0
-            if row not in previous_rows: 
-                print(row)
-                for data in row:
-                    value = data
-                    if ':' in data:
-                        inData = True
-                        characterIndex = data.index(':') + 1
-                        value = data[characterIndex:]
-                    if inData:
-                        print(element_counter)
-                        print(value)
-                        global_data_list.append(value)
-                        element_counter+=1
-                previous_rows.append(row)
-            
-
-def create_tables(connection):
-    cursor = connection.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS cansatReadings(dataType STRING, dataValue REAl, Timestamp REAL)''')
-    connection.commit()
+def ahrs_algorithim(gyroscope_data, accelerometer_data):
+    ahrs = imufusion.Ahrs()
+    euler_angle = np.empty((1,3))
     
-def parse_data(connection):
-    time_unix = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
-    data_names = ["latitiude", "longitude","alt", "temp", "pressure"]
-    cursor = connection.cursor()
-    for value in global_data_list:
-            reading_name = data_names[global_data_list.index(value)]
-            cursor.execute('''INSERT INTO cansatReadings(dataType, dataValue, Timestamp) VALUES(?,?,?)''',( reading_name,value,time_unix))
-            connection.commit()
-            
-    global_data_list.clear()
+    for i in range(0,len(gyroscope_data)):
+        gyroscope_data[i] = int(gyroscope_data[i])
+    for i in range(0,len(accelerometer_data)):
+        accelerometer_data[i] = int(accelerometer_data[i]) 
+    gyroscope_data = np.array(gyroscope_data)
+    accelerometer_data = np.array(accelerometer_data)
+    print(gyroscope_data)
+    print(accelerometer_data)
+    ahrs.update_no_magnetometer(gyroscope_data, accelerometer_data, 1 )   
+    euler_angle[0] = ahrs.quaternion.to_euler()
+    return euler_angle[0]
 
-def get_array_index(section_counter, data_counter):
-    gps_data = [0,1]
-    bme_data = [2]
-    dht_data = [3]
-    array_index = 0
-    if section_counter == 1:
-       array_index = gps_data[data_counter%2]
-    elif section_counter == 2:
-       array_index = bme_data[data_counter%1]
-    elif section_counter == 3:
-        array_index = dht_data[data_counter%1]
-    return array_index
+def logarithmic_sheer(low_down_wind_speed,wanted_height):
+    new_velocity = low_down_wind_speed * ((math.log((0.106)/(0.03)))/(math.log((wanted_height)/(0.03))))
+    return new_velocity
 
+def hall_effect_sensor_to_wind_speed(triggers): 
+    rotations = float(triggers[0])/3
+    distance_travelled = rotations * 34.34
+    time_taken = 124
+    speed =  distance_travelled/time_taken
+    return speed
+
+def calculate_altitude(air_pressure):
+    alt_feet = ((10**((math.log10(float(air_pressure)/1013.25))/(5.2558797)))-1)/(-6.8755856 * 10**6)
+    alt_met = alt_feet/3.281
+    return alt_met
+
+def update_imu_table(name, value,time,conn):
+    cursor = conn.cursor()
+    sql = "INSERT INTO imuReadings(name, value, timestamp) VALUES (?,?,?)"
+    cursor.execute(sql,(name,value,time))
+    conn.commit()
+
+def update_regular_table(name, value,time,conn):
+    cursor = conn.cursor()
+    sql = "INSERT INTO regularReadings(name, value, timestamp) VALUES (?,?,?)"
+    cursor.execute(sql,(name,value,time))
+    conn.commit()
+    
+def update_average_table(name, time,conn):
+    cursor = conn.cursor()
+    sql = "INSERT INTO averageReadings(name, value, timestamp) VALUES (?,?,?)"
+    previous_values = []
+    average_value = 0
+    cursor.execute("SELECT value from regularReadings where name=?", (name,))
+    previous_values = cursor.fetchall()
+    average_value = sum(previous_values)/len(previous_values)
+    cursor.execute(sql,(name, average_value, time))
+    conn.commit()
+    
+def update_gps_table(name,value, time, conn):
+    cursor = conn.cursor()
+    sql = "INSERT INTO gpsReadings(name, value, timestamp) VALUES (?,?,?)"
+    cursor.execute(sql,(name,value,time))
+    conn.commit()
+
+
+def convert_data(row_as_list,conn):
+    
+
+    altitude_list = []
+    for pressure in row_as_list[5]:
+        altitude_list.append(calculate_altitude(pressure))
+    wind_speed = []
+    wind_speed_at_90 = []
+    wind_speed.append(hall_effect_sensor_to_wind_speed(row_as_list[11]))
+    wind_speed_at_90.append(logarithmic_sheer(wind_speed[0],90))
+    euler_angles = ahrs_algorithim(row_as_list[7], row_as_list[8]).tolist()
+    lux_list = []
+    for voltage in row_as_list[10]:
+        lux_list.append(ldr_voltage_to_lux(voltage))
+    solar_irradiance_list = []
+    for lux in lux_list:
+        solar_irradiance_list.append(lux_to_solar_irradiance(lux))
+    
+    for i in range(0,10):
+        final_converted_list[i] = row_as_list[i]
+    final_converted_list[10] = euler_angles
+    final_converted_list[11] = row_as_list[10]
+    final_converted_list[12] = lux_list
+    final_converted_list[13] = solar_irradiance_list
+    final_converted_list[14] = row_as_list[11]
+    final_converted_list[15] = wind_speed
+    final_converted_list[16] = wind_speed_at_90
+    final_converted_list[17] = row_as_list[12]
+    final_converted_list[18] = row_as_list[13]
+    final_converted_list[19] = row_as_list[14]
+    final_converted_list[20] = row_as_list[16]
+    final_converted_list[21] = row_as_list[17]
+    final_converted_list[22] = row_as_list[18]
+    final_converted_list[23] = row_as_list[19]
+    final_converted_list[24] = row_as_list[20]
+    final_converted_list[25] = row_as_list[21]
+    final_converted_list[26] = altitude_list
+    
+    for i in range(0,len(final_converted_list)):
+        if i > 0 and i < 7:
+            if i == 1 or i == 2 or i == 3 or i == 4:
+                for data in final_converted_list[i]:
+                    if float(data) < 100 or float(data) > -10:
+                         update_regular_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
+            else:
+                for data in final_converted_list[i]:
+                    update_regular_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
+        if i > 6 and i < 10:
+            for data in final_converted_list[i]:
+                update_imu_table(final_converted_list_names[i], float(data),final_converted_list[0][0],conn)
+        if i > 9 and i < 17:
+             for data in final_converted_list[i]:
+                update_regular_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
+        if i > 16 and i < 21:
+            for data in final_converted_list[i]:
+                update_gps_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
+        if i > 20 and i < 26:
+            for data in final_converted_list[i]:
+                update_regular_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
+        if i == 26:
+            for data in final_converted_list[i]:
+                update_regular_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
 
     
-connection = create_connection("readings.db")
+    return 0
+
+def is_malprinted_row_pre_check(row):
+    has_all_brackets = false
+    bracket_counter = 0
+    for character in row:
+        if '[' in character:
+            bracket_counter+=1
+        if ']' in character:
+            bracket_counter+=1
+    if bracket_counter == 20:
+        has_all_brackets = true
+    
+    return not has_all_brackets
+
+def create_db_connection():
+    conn = sql.connect("cansatReadings.db")
+    return conn
+
+def create_tables(conn):
+    cur = conn.cursor()
+    
+    cur.execute("CREATE TABLE IF NOT EXISTS imuReadings(name TEXT, value REAL, timestamp REAL)")
+    cur.execute("CREATE TABLE IF NOT EXISTS regularReadings(name TEXT, value REAL, timestamp REAL)")
+    cur.execute("CREATE TABLE IF NOT EXISTS gpsReadings(name TEXT, value REAL, timestamp REAL)")
+    cur.execute("CREATE TABLE IF NOT EXISTS runningAverage(name TEXT, value REAL, timestamp REAL)")
+    conn.commit()
+    
+
+def is_malprinted_row_post_check(row_as_list):
+    in_range = false
+    has_all_data = true
+    
+    dht_items = len(row_as_list[1]) + len(row_as_list[2])
+    bme_items = len(row_as_list[3]) + len(row_as_list[4])  + len(row_as_list[5]) + len(row_as_list[6])
+    imu_items = len(row_as_list[7]) + len(row_as_list[8]) + len(row_as_list[9])
+    gps_tems = len(row_as_list[12]) + len(row_as_list[13]) + len(row_as_list[14]) + len(row_as_list[15]) + len(row_as_list[16])
+    bat_tems = len(row_as_list[17]) + len(row_as_list[18])
+    file_items = len(row_as_list[19]) + len(row_as_list[20])
+    if dht_items % 2 != 0 or bme_items % 4 != 0 or imu_items % 9 != 0 or gps_tems % 7 !=0 or bat_tems % 2 !=0 or file_items % 2 != 0:
+        has_all_data = false
+    print(has_all_data)
+    return  not has_all_data
+    
+    
+def get_transmitted_data_index(section_counter, item_in_section_counter):
+    place_in_data_set = item_in_section_counter%no_items_in_section[section_counter]
+    return transimtted_data_place_in_array[section_counter][place_in_data_set]
+
+def parse_file(file_to_parse,conn):
+        csv_reader = csv.reader(file_to_parse)
+        line_counter = 0
+        
+        for row in csv_reader:
+            global lines_parsed
+            if line_counter >= lines_parsed and not is_malprinted_row_pre_check(row):   
+                print("Yas")
+                sensor_counter = -1
+                item_in_section_counter = -1
+                for character in row:
+                    if '[' in character:
+                        sensor_counter+=1
+                        character = character[1:]
+                        item_in_section_counter = -1
+                    item_in_section_counter+=1
+                    if ']' in character:
+                        character = character[:-1]  
+                    array_index = get_transmitted_data_index(sensor_counter, item_in_section_counter)
+                    transmitted_data_list[array_index].append(character)
+                if not is_malprinted_row_post_check(transmitted_data_list):
+                    convert_data(transmitted_data_list,conn)
+                    print(transmitted_data_list)
+                    for data_set in transmitted_data_list:
+                        data_set.clear()
+                    
+                line_counter+=1
+                lines_parsed+=1
+            else:
+                line_counter+=1
+        print(line_counter)
+
+fn = 'cansatReadings.csv'
+prev_time = get_time(fn)
+connection = create_db_connection()
 create_tables(connection)
-   
 
-get_time = lambda f: os.stat(f).st_ctime
-
-fn = 'readings.csv'
-prev_time = os.path.getmtime(fn)
-row_number = 0
 
 while True:
-    
-    t = os.path.getmtime(fn)
-    if t != prev_time:
-        row_to_array()
-        parse_data(connection)
-        
-        print("Updated")
+    t = get_time(fn)
+    if t != prev_time: 
+        with open("cansatReadings.csv ", 'r') as readings_file:
+            parse_file(readings_file,connection)
+            print(transmitted_data_list)
+            
         prev_time = t
+
+
+  
