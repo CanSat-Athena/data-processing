@@ -1,0 +1,5 @@
+GUI
+Different Checks (Integrated with GUI)
+Location (Integrated with GUI)
+Data Parsing/Conversions
+Data into Database
