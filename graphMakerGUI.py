@@ -82,7 +82,7 @@ def make_reading_reading_graph(x_axis_data_name, y_axis_data_name, x_axis_label,
     print(x_axis_data)
     print(y_axis_data)        
     
-    f = Figure(figsize=(5,5), dpi=100)
+    f = Figure(figsize=(8,8), dpi=100)
     a = f.add_subplot(111)
     a.scatter(x_axis_data,y_axis_data)
     a.set_xlabel(x_axis_label)
