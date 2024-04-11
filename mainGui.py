@@ -146,12 +146,12 @@ def display_table_titles():
     windSpeedLabel = Label(root, text= "Wind Speed",  borderwidth= 2, relief=  "solid")
     lightIntensityLabel = Label(root, text= "Light Intensity", borderwidth= 2, relief=  "solid")
     
-    tempLabel.grid(row = 0, column = 1, padx= 60)
-    pressLabel.grid(row = 0, column = 2, padx= 60)
-    altLabel.grid(row = 0, column = 3, padx= 60)
-    humidLabel.grid(row = 0, column = 4, padx= 60)
-    windSpeedLabel.grid(row = 0, column = 5, padx= 60)
-    lightIntensityLabel.grid(row = 0, column = 6, padx= 60)
+    tempLabel.grid(row = 0, column = 1, padx= 20)
+    pressLabel.grid(row = 0, column = 2, padx= 20)
+    altLabel.grid(row = 0, column = 3, padx= 20)
+    humidLabel.grid(row = 0, column = 4, padx= 20)
+    windSpeedLabel.grid(row = 0, column = 5, padx= 20)
+    lightIntensityLabel.grid(row = 0, column = 6, padx= 20)
 
 
 def update_cansat_position():
@@ -191,9 +191,9 @@ def update_data_lists():
     all_press_values = cur.fetchall()
     cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("alt_calc",))
     all_alt_values = cur.fetchall()
-    cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("dhtHum",))
+    cur.execute('''SELECT timestamp FROM regularReadings WHERE name=?''',("dhtHum",))
     all_humid_values = cur.fetchall()
-    cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("windSpeed",))
+    cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("windTriggers",))
     all_speed_values = cur.fetchall()
     cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("ldrLux",))
     all_light_values = cur.fetchall()
@@ -243,17 +243,17 @@ def display_data_value():
     for i in range(0, len(light_intens_values)):
         lightIntensityListBox.insert(i,light_intens_values[i])
     
-    tempListBox.grid(row = 1, column = 1, padx = 50)
-    pressListBox.grid(row = 1, column = 2, padx = 50)
-    altListBox.grid(row = 1, column = 3, padx = 50)
-    humidListBox.grid(row = 1, column = 4, padx = 50)
-    windSpeedListBox.grid(row = 1, column = 5, padx = 50)
-    lightIntensityListBox.grid(row = 1, column = 6, padx = 50)
+    tempListBox.grid(row = 1, column = 1, padx = 20)
+    pressListBox.grid(row = 1, column = 2, padx = 20)
+    altListBox.grid(row = 1, column = 3, padx = 20)
+    humidListBox.grid(row = 1, column = 4, padx = 20)
+    windSpeedListBox.grid(row = 1, column = 5, padx = 20)
+    lightIntensityListBox.grid(row = 1, column = 6, padx = 20)
 
 while True:
     display_table_titles()
     display_data_value()
     update_data_lists()
     update_cansat_position()
-    update_checks()
+    #update_checks()
     root.update()

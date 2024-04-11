@@ -82,20 +82,14 @@ def make_reading_reading_graph(x_axis_data_name, y_axis_data_name, x_axis_label,
     print(x_axis_data)
     print(y_axis_data)        
     
-    f = Figure(figsize=(8,8), dpi=100)
-    a = f.add_subplot(111)
-    a.scatter(x_axis_data,y_axis_data)
-    a.set_xlabel(x_axis_label)
-    a.set_ylabel(y_axis_label)
-    a.set_title(graph_label)
     
-    canvas = FigureCanvasTkAgg(f, root)
-    canvas.draw()
-    canvas.get_tk_widget().grid(column = 10, row = 2)
-
-    toolbar = NavigationToolbar2Tk(canvas, root)
-    toolbar.update()
-    canvas._tkcanvas.grid(column = 10 , row = 3)
+    ply.scatter(x_axis_data,y_axis_data, s = 3)
+    ply.xlabel(x_axis_label)
+    ply.ylabel(y_axis_label)
+    ply.title(graph_label)
+    ply.savefig("graph.jpg")
+    
+    
 
 def make_reading_time_graph(x_axis_data_name, x_axis_label, y_axis_label, graph_label):
     x_axis_data = []
@@ -122,20 +116,13 @@ def make_reading_time_graph(x_axis_data_name, x_axis_label, y_axis_label, graph_
     
    
     
-    f = Figure(figsize=(5,5), dpi=100)
-    a = f.add_subplot(111)
-    a.scatter(time_data,x_axis_data)
-    a.set_xlabel(x_axis_label)
-    a.set_ylabel(y_axis_label)
-    a.set_title(graph_label)
     
-    canvas = FigureCanvasTkAgg(f, root)
-    canvas.draw()
-    canvas.get_tk_widget().grid(column = 10, row = 2)
-
-    toolbar = NavigationToolbar2Tk(canvas, root)
-    toolbar.update()
-    canvas._tkcanvas.grid(column = 10 , row = 3)
+    ply.plot(time_data,x_axis_data)
+    ply.xlabel(x_axis_label)
+    ply.ylabel(y_axis_label)
+    ply.title(graph_label)
+    ply.savefig("graph.jpg")
+    
 
 
 def make_graph():

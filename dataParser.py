@@ -73,12 +73,11 @@ imu_calbrator_button = Button(root,text = "Calibrate IMU", command = calibrate_i
 imu_calbrator_button.grid()
 
 def ldr_voltage_to_lux(voltage_transmitted):
-    lux = 0
-    if voltage_transmitted != "":
-        voltage  = (float(voltage_transmitted)/4095) * 3.3
-        resistance = voltage/2 
-        lux = resistance * 10
-    return lux
+    voltage_transmitted = int(voltage_transmitted)
+    actual_voltage = (voltage_transmitted/4095) * 3.3
+    r_2 = 7450
+    resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
+    return resistance
 
 def lux_to_solar_irradiance(lux):
     solar_irradiance = lux * 0.0079
@@ -194,11 +193,11 @@ def convert_data(row_as_list,conn):
         
         is_calibrating_imu = false    
 
-        for i in range(0, len(row_as_list[7])):
+    for i in range(0, len(row_as_list[7])):
           if row_as_list[7][i] != "" : 
             row_as_list[7][i] = float(row_as_list[7][i])
             row_as_list[7][i]-=accel_offset[i%3]
-        for i in range(0, len(row_as_list[8])):
+    for i in range(0, len(row_as_list[8])):
           if row_as_list[8][i] != "" :   
             row_as_list[8][i] = float(row_as_list[8][i])
             row_as_list[8][i]-=accel_offset[i%3]
@@ -214,6 +213,7 @@ def convert_data(row_as_list,conn):
     euler_angles = ahrs_algorithim(row_as_list[7], row_as_list[8]).tolist()
     lux_list = []
     for voltage in row_as_list[10]:
+       if voltage != '': 
         lux_list.append(ldr_voltage_to_lux(voltage))
     solar_irradiance_list = []
     for lux in lux_list:
@@ -251,9 +251,12 @@ def convert_data(row_as_list,conn):
                   if data != '':  
                     update_regular_table(final_converted_list_names[i], float(data), final_converted_list[0][0],conn)
         if i > 6 and i < 10:
+            axis_labels = ["X","Y","Z"]
+            p = 0
             for data in final_converted_list[i]:
                if data != '':   
-                update_imu_table(final_converted_list_names[i], float(data),final_converted_list[0][0],conn)
+                update_imu_table(final_converted_list_names[i] + axis_labels[p%3], float(data),final_converted_list[0][0],conn)
+               p+=1
         if i > 9 and i < 17:
              for data in final_converted_list[i]:
                if data != '':    
