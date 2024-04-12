@@ -22,13 +22,26 @@ has_deployed = false
 alt_decrease_counter = 0
 alt_same_counter = 0
 
-
 root = Tk()
+
+hasLandedLabel = Label(root, text = "Has Landed: " + str(has_landed))
+hasDeployedLabel = Label(root, text = "Has Deployed: " + str(has_deployed))
+hasLaunchedLabel = Label(root, text = "Has Launched: " + str(has_launched))
+
+
+
 root.geometry("1800x1000")
 map_widget = TkinterMapView(root, width= 300, height= 300)
 map_widget.grid(column = 5, row = 10)
 cansat_marker = map_widget.set_position(cansat_lat_long[0], cansat_lat_long[1], marker= True)
 
+def checks_display():
+    
+    
+    hasLandedLabel.grid()
+    hasDeployedLabel.grid()
+    hasLaunchedLabel.grid()
+    
 def update_checks():
     
   global has_launched
@@ -46,45 +59,57 @@ def update_checks():
     cur = db.cursor()
     
     cur.execute("SELECT value FROM baseLineReadings WHERE name = 'baseAltitude'")
-    base_alt = float(cur.fetchone())
+    base_alt = cur.fetchone()
+    if base_alt is not None:
+        base_alt = float(base_alt)
     
     
+        cur.execute("SELECT value FROM regularReadings WHERE name = 'alt'")
+        current_alt = cur.fetchone()
+        if current_alt is not None:
+         current_alt = float(current_alt)
     
-    cur.execute("SELECT value FROM regularReadings WHERE name = 'alt'")
-    current_alt = float(cur.fetchone())
     
-    cur.execute("SELECT timestamp FROM regularReadings WHERE name = alt")
-    timestamp = float(cur.fetchone())
+        cur.execute("SELECT timestamp FROM gpsReadings WHERE name = 'alt'")
+        timestamp
+        timestamp = cur.fetchone()
+        if timestamp is not None:
+          timestamp = float(timestamp[0])
     
-    if base_alt != -99 and current_alt != -100:
-        if (current_alt - 50) > base_alt:
-            has_launched = true
-            cur.execute("INSERT INTO flightChecks(name,hasHappened,timestamp) VALUES (?,?,?)", ("hasLaunched",true, timestamp))
+        if base_alt != -99 and current_alt != -100:
+            if (current_alt - 50) > base_alt:
+             has_launched = true
+             cur.execute("INSERT INTO flightChecks(name,hasHappened,timestamp) VALUES (?,?,?)", ("hasLaunched",true, timestamp))
 
     
   if not has_deployed and has_launched:
         previous_alts = []
         current_alt = 0
         current_fix = -1
-        cur.execute("SELECT value FROM gpsReadings WHERE name = fix")
-        current_fix = int(cur.fetchone())
+        cur.execute("SELECT value FROM gpsReadings WHERE name = 'fix'")
+        current_fix = cur.fetchone()
+        if current_fix is not None:
+            current_fix = int(current_fix)
         
-        cur.execute("SELECT timestamp FROM regularReadings WHERE name = alt")
-        timestamp = float(cur.fetchone())
+            cur.execute("SELECT timestamp FROM gpsReadings WHERE name = 'alt'")  
+            timestamp = 0
+            timestamp = cur.fetchone()
+            if timestamp is not None:
+             timestamp = float(timestamp[0])
         
-        if current_fix != 0:
-            cur.execute("SELECT value FROM gpsReadings WHERE name = alt")
-            previous_alts = cur.fetchall()
-            current_alt = previous_alts[-1]
-        else:
-            cur.execute("SELECT value FROM gpsReadings WHERE name = alt_calc")
-            previous_alts = cur.fetchall()
-            current_alt = previous_alts[-1]
+            if current_fix != 0:
+             cur.execute("SELECT value FROM gpsReadings WHERE name = 'alt'")
+             previous_alts = cur.fetchall()
+             current_alt = previous_alts[-1]
+            else:
+                cur.execute("SELECT value FROM regularReadings WHERE name = 'alt_calc'")
+                previous_alts = cur.fetchall()
+                current_alt = previous_alts[-1]
         
-        previous_alt_decrease_counter = 0
+            previous_alt_decrease_counter = 0
         
-        if len(previous_alts) >= 30:
-            for alt in previous_alts:
+            if len(previous_alts) >= 30:
+             for alt in previous_alts:
                 alt = float(alt)
                 current_alt = float(current_alt)
                 if alt < current_alt:
@@ -104,16 +129,16 @@ def update_checks():
         cur.execute("SELECT value FROM gpsReadings WHERE name = 'fix'")
         current_fix = int(cur.fetchone())
         
-        cur.execute("SELECT timestamp FROM regularReadings WHERE name = alt")
+        cur.execute("SELECT timestamp FROM gpsReadings WHERE name = 'alt'")
         timestamp = float(cur.fetchone())
         
         
         if current_fix != 0:
-            cur.execute("SELECT value FROM gpsReadings WHERE name = alt")
+            cur.execute("SELECT value FROM gpsReadings WHERE name = 'alt'")
             previous_alts = cur.fetchall()
             current_alt = previous_alts[-1]
         else:
-            cur.execute("SELECT value FROM gpsReadings WHERE name = alt_calc")
+            cur.execute("SELECT value FROM regularReadings WHERE name = 'alt_calc'")
             previous_alts = cur.fetchall()
             current_alt = previous_alts[-1]
 
@@ -255,5 +280,6 @@ while True:
     display_data_value()
     update_data_lists()
     update_cansat_position()
-    #update_checks()
+    update_checks()
+    checks_display()
     root.update()

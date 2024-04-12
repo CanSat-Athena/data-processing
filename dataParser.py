@@ -77,7 +77,8 @@ def ldr_voltage_to_lux(voltage_transmitted):
     actual_voltage = (voltage_transmitted/4095) * 3.3
     r_2 = 7450
     resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
-    return resistance
+    lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
+    return lux
 
 def lux_to_solar_irradiance(lux):
     solar_irradiance = lux * 0.0079
