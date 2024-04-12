@@ -159,21 +159,7 @@ def convert_data(row_as_list,conn):
     row_as_list[0][0] += offset
     last_ms = row_as_list[0][0]
     
-    global is_calibrating_imu
-    if is_calibrating_imu:
-        for i in range(0, len(row_as_list[7])):
-          if row_as_list[7][i] != '':
-            accel_calibrating_values[i%3].append(float(row_as_list[7][i]))
-        for i in range(0, len(row_as_list[7])):
-           if row_as_list[7][i] != '': 
-            accel_calibrating_values[i%3].append(float(row_as_list[7][i]))
-        for i in range(0,3):
-           if row_as_list[7][i] != '':     
-            accel_offset[i] = sum(accel_calibrating_values[i])/len(accel_calibrating_values[i])
-        for i in range(0,3):
-          if row_as_list[7][i] != '':  
-            gyro_offset[i] = sum(gyro_calibrating_values[i])/len(gyro_calibrating_values[i])
-        is_calibrating_imu = false    
+   
 
     for i in range(0, len(row_as_list[7])):
        if row_as_list[7][i] != '': 
