@@ -63,12 +63,9 @@ running_average_list = ["dhtTemp", "dhtHum", "bmeTemp", "bmeHum", "bmePres", "bm
 root = Tk()
 root.geometry("100x100")
 
-def calibrate_imu():
-    global is_calibrating_imu
-    is_calibrating_imu = true
 
-imu_calbrator_button = Button(root,text = "Calibrate IMU", command = calibrate_imu)
-imu_calbrator_button.grid()
+
+
 
 def ldr_voltage_to_lux(voltage_transmitted):
     lux = 0
@@ -107,17 +104,22 @@ def logarithmic_sheer(low_down_wind_speed,wanted_height):
     return new_velocity
 
 def hall_effect_sensor_to_wind_speed(triggers): 
-    rotations = float(triggers[0])/3
-    distance_travelled = rotations * 34.34
-    time_taken = 124
-    speed =  distance_travelled/time_taken
-    return speed
+    time_difference = (transmitted_data_list[0][0] - last_ms)/1000
+    rotational_speed = triggers * (60/time_difference)
+    wind_speed_ms = 0.007 * (rotational_speed) + 0.22
+    wind_speed_kh = (wind_speed_ms*3600)/1000
+    
+    return wind_speed_kh
 
 def calculate_altitude(air_pressure):
-    alt_feet = ((10**((math.log10(float(air_pressure)/1013.25))/(5.2558797)))-1)/(-6.8755856 * 10**6)
-    alt_met = alt_feet/3.281
-    return alt_met
-
+    base_pres = 0
+    db = sql.connect("cansatReadings.db")
+    curr = db.cursor()
+    curr.execute("SELECT value FROM baseLineReadings where name = 'basePressure'")
+    base_pres = curr.fetchone()
+    if base_pres != None:
+        alt_met = (44330 * (1 - ((air_pressure)/(base_pres))**0.1903))
+        return alt_met
 def update_imu_table(name, value,time,conn):
     cursor = conn.cursor()
     sql = "INSERT INTO imuReadings(name, value, timestamp) VALUES (?,?,?)"
@@ -157,7 +159,7 @@ def convert_data(row_as_list,conn):
         offset = last_ms
     row_as_list[0][0] = int(row_as_list[0][0])
     row_as_list[0][0] += offset
-    last_ms = row_as_list[0][0]
+    
     
    
 
@@ -231,7 +233,8 @@ def convert_data(row_as_list,conn):
 
         if final_converted_list_names[i] in running_average_list:
             update_average_table(final_converted_list_names[i], final_converted_list[0][0], conn)
-        
+    
+    last_ms = row_as_list[0][0]
     return 0
 
 def is_malprinted_row_pre_check(row):

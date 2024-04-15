@@ -110,17 +110,24 @@ def logarithmic_sheer(low_down_wind_speed,wanted_height):
     return new_velocity
 
 def hall_effect_sensor_to_wind_speed(triggers): 
-    rotations = float(triggers[0])/3
-    distance_travelled = rotations * 34.34
-    time_taken = 124
-    speed =  distance_travelled/time_taken
-    return speed
+    time_difference = (transmitted_data_list[0][0] - last_ms)/1000
+    print(triggers + "Triggers")
+    rotational_speed = int(triggers) * (60/time_difference)
+    wind_speed_ms = 0.007*(rotational_speed) + 0.22
+    wind_speed_kh = (wind_speed_ms*3600)/1000
+    
+    return wind_speed_kh
 
 def calculate_altitude(air_pressure):
-    alt_feet = ((10**((math.log10(float(air_pressure)/1013.25))/(5.2558797)))-1)/(-6.8755856 * 10**6)
-    alt_met = alt_feet/3.281
-    return alt_met
-
+    base_pres = 0
+    db = sql.connect("cansatReadings.db")
+    curr = db.cursor()
+    curr.execute("SELECT value FROM baseLineReadings where name = 'basePressure'")
+    base_pres = curr.fetchone()
+    if base_pres != None:
+        alt_met = (44330 * (1 - ((air_pressure)/(base_pres))**0.1903))
+        return alt_met
+    return 0
 def update_imu_table(name, value,time,conn):
     cursor = conn.cursor()
     sql = "INSERT INTO imuReadings(name, value, timestamp) VALUES (?,?,?)"
@@ -163,15 +170,18 @@ def convert_data(row_as_list,conn):
     global last_ms
     global offset
     
+    
+    
     if int(row_as_list[0][0]) < last_ms:
         offset = last_ms
     row_as_list[0][0] = int(row_as_list[0][0])
     row_as_list[0][0] += offset
-    last_ms = row_as_list[0][0]
+    
     
     global is_calibrating_imu
     if is_calibrating_imu:
         alt = row_as_list[14][0]
+        pressure = row_as_list[5][0]
         for i in range(0, len(row_as_list[7])):
           if row_as_list[7][i] != '':
             accel_calibrating_values[i%3].append(float(row_as_list[7][i]))
@@ -179,18 +189,21 @@ def convert_data(row_as_list,conn):
            if row_as_list[7][i] != '': 
             accel_calibrating_values[i%3].append(float(row_as_list[7][i]))
         for i in range(0,3):
-           if row_as_list[7][i] != '':     
-            accel_offset[i] = sum(accel_calibrating_values[i])/len(accel_calibrating_values[i])
+           if row_as_list[7][i] != '':    
+             if len(accel_calibrating_values[i]) != 0: 
+                accel_offset[i] = sum(accel_calibrating_values[i])/len(accel_calibrating_values[i])
         for i in range(0,3):
           if row_as_list[7][i] != '':  
-            gyro_offset[i] = sum(gyro_calibrating_values[i])/len(gyro_calibrating_values[i])
-        update_baseline_table("accelXOffset", accel_offset[0])
-        update_baseline_table("accelYOffset", accel_offset[1])
-        update_baseline_table("accelZOffset", accel_offset[2])
-        update_baseline_table("gyroXOffset", gyro_offset[0])
-        update_baseline_table("gyroYOffset", gyro_offset[1])
-        update_baseline_table("gyroZOffset", gyro_offset[2])
-        update_baseline_table("baseAltitude", alt)
+             if len(gyro_calibrating_values[i]) != 0: 
+                gyro_offset[i] = sum(gyro_calibrating_values[i])/len(gyro_calibrating_values[i])
+        update_baseline_table("accelXOffset", accel_offset[0],conn)
+        update_baseline_table("accelYOffset", accel_offset[1],conn)
+        update_baseline_table("accelZOffset", accel_offset[2],conn)
+        update_baseline_table("gyroXOffset", gyro_offset[0],conn)
+        update_baseline_table("gyroYOffset", gyro_offset[1],conn)
+        update_baseline_table("gyroZOffset", gyro_offset[2],conn)
+        update_baseline_table("baseAltitude", alt,conn)
+        update_baseline_table("basePressure", pressure,conn)
         
         
         is_calibrating_imu = false    
@@ -210,7 +223,7 @@ def convert_data(row_as_list,conn):
         altitude_list.append(calculate_altitude(pressure))
     wind_speed = []
     wind_speed_at_90 = []
-    wind_speed.append(hall_effect_sensor_to_wind_speed(row_as_list[11]))
+    wind_speed.append(hall_effect_sensor_to_wind_speed(row_as_list[11][0]))
     wind_speed_at_90.append(logarithmic_sheer(wind_speed[0],90))
     euler_angles = ahrs_algorithim(row_as_list[7], row_as_list[8]).tolist()
     lux_list = []
@@ -278,7 +291,7 @@ def convert_data(row_as_list,conn):
 
         if final_converted_list_names[i] in running_average_list:
             update_average_table(final_converted_list_names[i], final_converted_list[0][0], conn)
-        
+    last_ms = row_as_list[0][0]
     return 0
 
 def is_malprinted_row_pre_check(row):

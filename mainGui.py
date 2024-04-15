@@ -58,17 +58,6 @@ toolbarFrame = Frame(master=root)
 toolbarFrame.grid(row=2,column=0)
 toolbar = NavigationToolbar2Tk(canvas, toolbarFrame)
 
-t = Figure(figsize=(5,4), dpi=100)
-b = t.add_subplot(111)
-
-canva = FigureCanvasTkAgg(t, master=root)
-canva.draw()
-canva.get_tk_widget().grid(row=2, column=0, ipadx=40, ipady=20)
-
-
-toolbarFrames = Frame(master=root)
-toolbarFrames.grid(row=3,column=0)
-toolbas = NavigationToolbar2Tk(canvas, toolbarFrame)
 
 
 
@@ -96,33 +85,6 @@ def animate_alt_graph(i):
     a.clear()
     a.scatter(x_axis_data,y_axis_data)
 
-
-
-def animate_imu_graph(i):
-    
-    x_axis_data=[]
-    y_axis_data_x=[]
-    y_axis_data_y=[]
-    y_axis_data_x=[]
-    
-    db = sql.connect("cansatReadings.db")
-    cur = db.cursor()
-    cur.execute("SELECT value FROM imuReadings WHERE name = 'accelX'")
-    y_axis_data_x = cur.fetchall()
-    print(y_axis_data_x)
-    cur.execute("SELECT value FROM imuReadings WHERE name = 'accelY'")
-    y_axis_data_y = cur.fetchall()
-    cur.execute("SELECT value FROM imuReadings WHERE name = 'accelZ'")
-    y_axis_data_z = cur.fetchall()
-    cur.execute("SELECT timestamp FROM imuReadings WHERE name = 'accelX'")
-    x_axis_data = cur.fetchall()
-    
-    global b
-    
-    b.clear()
-    b.scatter(x_axis_data,y_axis_data_x, color = "red" )
-    b.scatter(x_axis_data,y_axis_data_y, color = "green" )
-    b.scatter(x_axis_data,y_axis_data_z, color = "bluee" )
     
     
 def checks_display():
@@ -378,7 +340,7 @@ def display_data_value():
     timeListBox.grid(row = 1, column = 7, padx = 20)
     
 ani_alt = animation.FuncAnimation(f, animate_alt_graph, interval=1000)    
-ani_imu = animation.FuncAnimation(t, animate_imu_graph, interval=1000) 
+
 
 
 fn = "cansatReadings.db"
