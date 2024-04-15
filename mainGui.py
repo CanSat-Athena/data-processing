@@ -1,13 +1,24 @@
 from tkinter import *
 import sqlite3 as sql
+import matplotlib.animation as animation
+from matplotlib import style
+style.use('ggplot')
 from tkintermapview import TkinterMapView
+from matplotlib.figure import Figure 
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
+NavigationToolbar2Tk) 
 import time
+import os as os
+
+get_time = lambda fn: os.path.getmtime(fn)
+
 temp_values = [1,2,3,4,5]
 press_values = [6,7,8,9,10]
 alt_values = [11,12,13,14,15]
 humid_values = [16,17,18,19,20]
 wind_speed_values = [21,22,23,24,25]
 light_intens_values = [26,27,28,29,30]
+time_values = [0,0,0,0,0]
 
 cansat_lat_long = [51.371641808232035, -0.2339994106653362]
 
@@ -30,17 +41,96 @@ hasLaunchedLabel = Label(root, text = "Has Launched: " + str(has_launched))
 
 
 
-root.geometry("1800x1000")
+root.geometry("600x400")
 map_widget = TkinterMapView(root, width= 300, height= 300)
-map_widget.grid(column = 5, row = 10)
-cansat_marker = map_widget.set_position(cansat_lat_long[0], cansat_lat_long[1], marker= True)
+map_widget.grid(column = 6, row = 10)
+#cansat_marker = map_widget.set_position(cansat_lat_long[0], cansat_lat_long[1], marker= True)
 
+f = Figure(figsize=(5,4), dpi=100)
+a = f.add_subplot(111)
+
+canvas = FigureCanvasTkAgg(f, master=root)
+canvas.draw()
+canvas.get_tk_widget().grid(row=1, column=0, ipadx=40, ipady=20)
+
+
+toolbarFrame = Frame(master=root)
+toolbarFrame.grid(row=2,column=0)
+toolbar = NavigationToolbar2Tk(canvas, toolbarFrame)
+
+t = Figure(figsize=(5,4), dpi=100)
+b = t.add_subplot(111)
+
+canva = FigureCanvasTkAgg(t, master=root)
+canva.draw()
+canva.get_tk_widget().grid(row=2, column=0, ipadx=40, ipady=20)
+
+
+toolbarFrames = Frame(master=root)
+toolbarFrames.grid(row=3,column=0)
+toolbas = NavigationToolbar2Tk(canvas, toolbarFrame)
+
+
+
+    
+    
+    
+    
+    
+    
+
+def animate_alt_graph(i):
+    
+    x_axis_data=[]
+    y_axis_data=[]
+    
+    db = sql.connect("cansatReadings.db")
+    cur = db.cursor()
+    cur.execute("SELECT value FROM regularReadings WHERE name = 'alt_calc'")
+    y_axis_data = cur.fetchall()
+    cur.execute("SELECT timestamp FROM regularReadings WHERE name = 'alt_calc'")
+    x_axis_data = cur.fetchall()
+    
+    global a
+    
+    a.clear()
+    a.scatter(x_axis_data,y_axis_data)
+
+
+
+def animate_imu_graph(i):
+    
+    x_axis_data=[]
+    y_axis_data_x=[]
+    y_axis_data_y=[]
+    y_axis_data_x=[]
+    
+    db = sql.connect("cansatReadings.db")
+    cur = db.cursor()
+    cur.execute("SELECT value FROM imuReadings WHERE name = 'accelX'")
+    y_axis_data_x = cur.fetchall()
+    print(y_axis_data_x)
+    cur.execute("SELECT value FROM imuReadings WHERE name = 'accelY'")
+    y_axis_data_y = cur.fetchall()
+    cur.execute("SELECT value FROM imuReadings WHERE name = 'accelZ'")
+    y_axis_data_z = cur.fetchall()
+    cur.execute("SELECT timestamp FROM imuReadings WHERE name = 'accelX'")
+    x_axis_data = cur.fetchall()
+    
+    global b
+    
+    b.clear()
+    b.scatter(x_axis_data,y_axis_data_x, color = "red" )
+    b.scatter(x_axis_data,y_axis_data_y, color = "green" )
+    b.scatter(x_axis_data,y_axis_data_z, color = "bluee" )
+    
+    
 def checks_display():
     
     
-    hasLandedLabel.grid()
-    hasDeployedLabel.grid()
-    hasLaunchedLabel.grid()
+    hasLandedLabel.grid(column= 2, row = 5)
+    hasDeployedLabel.grid(column= 2, row = 6)
+    hasLaunchedLabel.grid(column= 2, row = 7)
     
 def update_checks():
     
@@ -93,7 +183,7 @@ def update_checks():
         
             cur.execute("SELECT timestamp FROM gpsReadings WHERE name = 'alt'")  
             timestamp = 0
-            timestamp = cur.fetchone()
+            timestamp = cur.fetchmany(30)
             if timestamp is not None:
              timestamp = float(timestamp[0])
         
@@ -101,10 +191,10 @@ def update_checks():
              cur.execute("SELECT value FROM gpsReadings WHERE name = 'alt'")
              previous_alts = cur.fetchall()
              current_alt = previous_alts[-1]
-            else:
-                cur.execute("SELECT value FROM regularReadings WHERE name = 'alt_calc'")
-                previous_alts = cur.fetchall()
-                current_alt = previous_alts[-1]
+        else:
+            cur.execute("SELECT value FROM regularReadings WHERE name = 'alt_calc'")
+            previous_alts = cur.fetchmany(30)
+            current_alt = previous_alts[-1]
         
             previous_alt_decrease_counter = 0
         
@@ -135,11 +225,11 @@ def update_checks():
         
         if current_fix != 0:
             cur.execute("SELECT value FROM gpsReadings WHERE name = 'alt'")
-            previous_alts = cur.fetchall()
+            previous_alts = cur.fetchmany(30)
             current_alt = previous_alts[-1]
         else:
             cur.execute("SELECT value FROM regularReadings WHERE name = 'alt_calc'")
-            previous_alts = cur.fetchall()
+            previous_alts = cur.fetchmany(30)
             current_alt = previous_alts[-1]
 
         previous_alt_close_counter = 0
@@ -149,7 +239,7 @@ def update_checks():
                 alt = float(alt)
                 if abs(alt - current_alt) <= 10:
                     previous_alt_close_counter+=1
-                if previous_alt_close_counter == 3:
+                if previous_alt_close_counter == 20:
                     alt_same_counter+=1
                     previous_alt_close_counter = 0
                 if alt_same_counter == 3:
@@ -170,14 +260,16 @@ def display_table_titles():
     humidLabel = Label(root, text= "Humidity",borderwidth = 2, relief=  "solid")
     windSpeedLabel = Label(root, text= "Wind Speed",  borderwidth= 2, relief=  "solid")
     lightIntensityLabel = Label(root, text= "Light Intensity", borderwidth= 2, relief=  "solid")
+    timeLabel = Label(root, text= "Timestamp", borderwidth= 2, relief=  "solid")
+    
     
     tempLabel.grid(row = 0, column = 1, padx= 20)
     pressLabel.grid(row = 0, column = 2, padx= 20)
     altLabel.grid(row = 0, column = 3, padx= 20)
     humidLabel.grid(row = 0, column = 4, padx= 20)
-    windSpeedLabel.grid(row = 0, column = 5, padx= 20)
+    windSpeedLabel.grid(row = 0, column = 5,)
     lightIntensityLabel.grid(row = 0, column = 6, padx= 20)
-
+    timeLabel.grid(row = 0, column = 7, padx= 20)
 
 def update_cansat_position():
         db = sql.connect("cansatReadings.db")
@@ -209,19 +301,22 @@ def update_data_lists():
     all_humid_values = []
     all_speed_values = []
     all_light_values = []
+    all_time_values = []
     
     cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("dhtTemp",))
     all_temp_values = cur.fetchall()
     cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("bmePres",))
     all_press_values = cur.fetchall()
-    cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("alt_calc",))
-    all_alt_values = cur.fetchall()
-    cur.execute('''SELECT timestamp FROM regularReadings WHERE name=?''',("dhtHum",))
+    cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("dhtHum",))
     all_humid_values = cur.fetchall()
     cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("windTriggers",))
     all_speed_values = cur.fetchall()
     cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("ldrLux",))
     all_light_values = cur.fetchall()
+    cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("alt_calc",))
+    all_alt_values = cur.fetchall()
+    cur.execute('''SELECT timestamp FROM regularReadings WHERE name=?''',("ldrLux",))
+    all_time_values = cur.fetchall()
     
     for i in range(0,5):
         if len(all_temp_values) >= 5:
@@ -241,6 +336,9 @@ def update_data_lists():
     for i in range(0,5):
         if len(all_light_values) >= 5:
          light_intens_values[i] = all_light_values[len(all_light_values)-1-i]
+    for i in range(0,5):
+        if len(all_time_values) >= 5:
+         time_values[i] = all_time_values[len(all_time_values)-1-i]
          
          
          
@@ -254,6 +352,7 @@ def display_data_value():
     humidListBox = Listbox(root)
     windSpeedListBox = Listbox(root)
     lightIntensityListBox = Listbox(root)
+    timeListBox = Listbox(root)    
     
     for i in range(0, len(temp_values)):
         tempListBox.insert(i,temp_values[i])
@@ -267,6 +366,8 @@ def display_data_value():
         windSpeedListBox.insert(i,wind_speed_values[i])
     for i in range(0, len(light_intens_values)):
         lightIntensityListBox.insert(i,light_intens_values[i])
+    for i in range(0, len(time_values)):
+        timeListBox.insert(i,time_values[i])
     
     tempListBox.grid(row = 1, column = 1, padx = 20)
     pressListBox.grid(row = 1, column = 2, padx = 20)
@@ -274,12 +375,23 @@ def display_data_value():
     humidListBox.grid(row = 1, column = 4, padx = 20)
     windSpeedListBox.grid(row = 1, column = 5, padx = 20)
     lightIntensityListBox.grid(row = 1, column = 6, padx = 20)
+    timeListBox.grid(row = 1, column = 7, padx = 20)
+    
+ani_alt = animation.FuncAnimation(f, animate_alt_graph, interval=1000)    
+ani_imu = animation.FuncAnimation(t, animate_imu_graph, interval=1000) 
+
+
+fn = "cansatReadings.db"
+t = 0
+prev_time = t
 
 while True:
     display_table_titles()
     display_data_value()
-    update_data_lists()
-    update_cansat_position()
-    update_checks()
-    checks_display()
+    t = get_time(fn)
+    if t != prev_time:
+      update_data_lists()
+      update_cansat_position()
+      update_checks()
+      checks_display()
     root.update()

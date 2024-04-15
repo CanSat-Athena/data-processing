@@ -67,6 +67,7 @@ root = Tk()
 root.geometry("100x100")
 
 def calibrate_imu():
+    global is_calibrating_imu
     is_calibrating_imu = true
 
 imu_calbrator_button = Button(root,text = "Calibrate IMU", command = calibrate_imu)
