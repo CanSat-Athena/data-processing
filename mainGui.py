@@ -196,7 +196,7 @@ def update_checks():
                     previous_alt_close_counter = 0
                 if alt_same_counter == 3:
                     has_landed = true
-                    cur.execute("INSERT INTO flightChecks(name,hasLanded,timestamp) VALUES (?,?,?)", ("hasDeployed",true, timestamp))
+                    cur.execute("INSERT INTO flightChecks(name,hasHappened,timestamp) VALUES (?,?,?)", ("hasLanded",true, timestamp))
 
 def display_table_titles():
     tempLabel = Label(root, text= "Temperature", borderwidth = 2, relief=  "solid")

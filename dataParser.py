@@ -74,12 +74,15 @@ imu_calbrator_button = Button(root,text = "Calibrate IMU", command = calibrate_i
 imu_calbrator_button.grid()
 
 def ldr_voltage_to_lux(voltage_transmitted):
-    voltage_transmitted = int(voltage_transmitted)
-    actual_voltage = (voltage_transmitted/4095) * 3.3
-    r_2 = 7450
-    resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
-    lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
-    return lux
+    if voltage_transmitted != "":
+        voltage_transmitted = int(voltage_transmitted)
+        actual_voltage = (voltage_transmitted/4095) * 3.3
+        r_2 = 7450
+        if actual_voltage != 0:
+            resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
+            lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
+        return lux
+    return 0
 
 def lux_to_solar_irradiance(lux):
     solar_irradiance = lux * 0.0079

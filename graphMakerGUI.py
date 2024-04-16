@@ -81,10 +81,7 @@ def make_reading_reading_graph(x_axis_data_name, y_axis_data_name, x_axis_label,
         for time in x_axis_data_time:
             cur.execute("SELECT value FROM gpsReadings where name = ? AND timestamp = ?",(y_axis_data_name,time[0]))
             y_axis_data.append(cur.fetchone())
-            
-    print(x_axis_data)
-    print(y_axis_data)        
-    
+                 
     
     ply.scatter(x_axis_data,y_axis_data, s = 3)
     ply.xlabel(x_axis_label)
@@ -119,11 +116,28 @@ def make_reading_time_graph(x_axis_data_name, x_axis_label, y_axis_label, graph_
     
    
     
+    launched_timestamp = 0
+    deployed_timestamp = 0
+    landed_timestamp = 0
+    cur.execute("SELECT timestamp FROM flightChecks where name = 'hasLaunched'")
+    launched_timestamp = cur.fetchone()
+    cur.execute("SELECT timestamp FROM flightChecks where name = 'hasDeployed'")
+    deployed_timestamp = cur.fetchone()
+    cur.execute("SELECT timestamp FROM flightChecks where name = 'hasLanded'")
+    landed_timestamp = cur.fetchone()
     
+    
+        
+        
     ply.plot(time_data,x_axis_data)
     ply.xlabel(x_axis_label)
     ply.ylabel(y_axis_label)
     ply.title(graph_label)
+    if landed_timestamp != None and deployed_timestamp !=None and launched_timestamp !=None:
+        ply.axvline(x = launched_timestamp)
+        ply.axvline(x = deployed_timestamp)
+        ply.axvline(x = landed_timestamp)
+    
     ply.savefig("graph.jpg")
     
 

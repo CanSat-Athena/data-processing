@@ -60,20 +60,13 @@ final_converted_list = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]
 final_converted_list_names = ["timestamp", "dhtTemp", "dhtHum", "bmeTemp", "bmeHum", "bmePres", "bmeGasRe", "imuAccel", "imuGyro", "imuMag", "eulerAngle", "ldrVoltage", "ldrLux", "ldrSolarIraddiance", "windTriggers", "windSpeed", "windSpeed90", "lat", "long", "alt", "fix","alt_calc"] 
 running_average_list = ["dhtTemp", "dhtHum", "bmeTemp", "bmeHum", "bmePres", "bmeGasRe","ldrVoltage", "ldrLux", "ldrSolarIraddiance", "windTriggers", "windSpeed", "windSpeed90"]
 
-root = Tk()
-root.geometry("100x100")
-
 continuePlotting = False
-
- 
- 
-
-
 
 
 def ldr_voltage_to_lux(voltage_transmitted):
     actual_voltage = (voltage_transmitted/4095) * 3.3
     r_2 = 7450
+    
     resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
     lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
     return lux
@@ -343,7 +336,6 @@ def parse_file(file_to_parse):
 
 if __name__ == '__main__':
     while True:
-        root.update()
         t = get_time(fn)
         if t != prev_time:
             with open("cansatReadings.csv ", 'r') as readings_file:
