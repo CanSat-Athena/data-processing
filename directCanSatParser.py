@@ -6,7 +6,8 @@ import imufusion as imufusion
 import numpy as np
 import os as os
 from tkinter import *
-import threading
+import sys as sys
+
 
 get_time = lambda fn: os.path.getmtime(fn)
 
@@ -64,11 +65,13 @@ continuePlotting = False
 
 
 def ldr_voltage_to_lux(voltage_transmitted):
-    actual_voltage = (voltage_transmitted/4095) * 3.3
-    r_2 = 7450
-    
-    resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
-    lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
+    lux = 0
+    if voltage_transmitted != "":
+        voltage_transmitted = int(voltage_transmitted)
+        actual_voltage = (voltage_transmitted/4095) * 3.3
+        r_2 = 7450
+        resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
+        lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
     return lux
 
 def lux_to_solar_irradiance(lux):
@@ -96,14 +99,16 @@ def ahrs_algorithim(gyroscope_data, accelerometer_data):
     return euler_angle[0]
 
 def logarithmic_sheer(low_down_wind_speed,wanted_height):
-    new_velocity = low_down_wind_speed * ((math.log((0.106)/(0.03)))/(math.log((wanted_height)/(0.03))))
+    new_velocity = low_down_wind_speed * ((math.log((0.0000106)/(0.03)))/(math.log((wanted_height/1000)/(0.03))))
     return new_velocity
 
 def hall_effect_sensor_to_wind_speed(triggers): 
+    wind_speed_kh = 0
     time_difference = (transmitted_data_list[0][0] - last_ms)/1000
-    rotational_speed = int(triggers) * (60/time_difference)
-    wind_speed_ms = 0.007 * (rotational_speed) + 0.22
-    wind_speed_kh = (wind_speed_ms*3600)/1000
+    if triggers != "":
+        rotational_speed = int(triggers) * (60/time_difference)
+        wind_speed_ms = 0.007 * (rotational_speed) + 0.22
+        wind_speed_kh = (wind_speed_ms*3600)/1000
     
     return wind_speed_kh
 
@@ -149,6 +154,29 @@ def update_gps_table(name,value, time, conn):
     conn.commit()
 
 
+def update_imu_offsets():
+    global accel_offset
+    global gyro_offset
+    
+    db = sql.connect("cansatReadings.db")
+    curr = db.cursor()
+    
+    curr.execute("SELECT value FROM baseLineReadings WHERE name = 'accelXOffset'")
+    accel_offset[0] = curr.fetchone()
+    curr.execute("SELECT value FROM baseLineReadings WHERE name = 'accelYOffset'")
+    accel_offset[1] = curr.fetchone()
+    curr.execute("SELECT value FROM baseLineReadings WHERE name = 'accelZOffset'")
+    accel_offset[2] = curr.fetchone()
+    
+    curr.execute("SELECT value FROM baseLineReadings WHERE name = 'gyroXOffset'")
+    gyro_offset[0] = curr.fetchone()
+    curr.execute("SELECT value FROM baseLineReadings WHERE name = 'gyroYOffset'")
+    gyro_offset[1] = curr.fetchone()
+    curr.execute("SELECT value FROM baseLineReadings WHERE name = 'gyroZOffset'")
+    gyro_offset[2] = curr.fetchone()
+    
+    
+    
 def convert_data(row_as_list,conn):
     
     global last_ms
@@ -338,9 +366,20 @@ if __name__ == '__main__':
     while True:
         t = get_time(fn)
         if t != prev_time:
-            with open("cansatReadings.csv ", 'r') as readings_file:
-                parse_file(readings_file)
-                print("Parsed")
+        
+            try:
+                update_imu_offsets()
+                with open("cansatReadings.csv ", 'r') as readings_file:
+                    parse_file(readings_file)
+                    print("Parsed")
+            except KeyboardInterrupt:
+                print('Interrupted')
+                try:
+                    sys.exit(130)
+                except SystemExit:
+                    os._exit(130)
+            except:
+                print("Failed To Parse")
             prev_time = t
 
 

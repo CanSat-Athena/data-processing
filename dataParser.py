@@ -5,6 +5,7 @@ import math as math
 import imufusion as imufusion
 import numpy as np
 import os as os
+import sys as sys
 from tkinter import *
 
 
@@ -109,15 +110,15 @@ def ahrs_algorithim(gyroscope_data, accelerometer_data):
     return euler_angle[0]
 
 def logarithmic_sheer(low_down_wind_speed,wanted_height):
-    new_velocity = low_down_wind_speed * ((math.log((0.106)/(0.03)))/(math.log((wanted_height)/(0.03))))
+    new_velocity = low_down_wind_speed * ((math.log((0.0000106)/(0.03)))/(math.log((wanted_height/1000)/(0.03))))
     return new_velocity
 
 def hall_effect_sensor_to_wind_speed(triggers): 
     time_difference = (transmitted_data_list[0][0] - last_ms)/1000
-    print(triggers + "Triggers")
-    rotational_speed = int(triggers) * (60/time_difference)
-    wind_speed_ms = 0.007*(rotational_speed) + 0.22
-    wind_speed_kh = (wind_speed_ms*3600)/1000
+    if triggers != "":
+        rotational_speed = int(triggers) * (60/time_difference)
+        wind_speed_ms = 0.007*(rotational_speed) + 0.22
+        wind_speed_kh = (wind_speed_ms*3600)/1000
     
     return wind_speed_kh
 
@@ -406,8 +407,17 @@ if __name__ == '__main__':
         t = get_time(fn)
         if t != prev_time:
             with open("cansatReadings.csv ", 'r') as readings_file:
-                parse_file(readings_file)
-                print("Parsed")
+                try:
+                    parse_file(readings_file)
+                    print("Parsed")
+                except KeyboardInterrupt:
+                    print('Interrupted')
+                    try:
+                     sys.exit(130)
+                    except SystemExit:
+                     os._exit(130)
+                except:
+                    print("Failed To Parse")
             prev_time = t
 
 
