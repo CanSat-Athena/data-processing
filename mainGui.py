@@ -113,7 +113,7 @@ def update_checks():
     cur.execute("SELECT value FROM baseLineReadings WHERE name = 'baseAltitude'")
     base_alt = cur.fetchone()
     if base_alt is not None:
-        base_alt = float(base_alt)
+        base_alt = float(base_alt[0])
     
     
         cur.execute("SELECT value FROM regularReadings WHERE name = 'alt'")
@@ -122,13 +122,13 @@ def update_checks():
          current_alt = float(current_alt)
     
     
-        cur.execute("SELECT timestamp FROM gpsReadings WHERE name = 'alt'")
-        timestamp
-        timestamp = cur.fetchone()
-        if timestamp is not None:
+         cur.execute("SELECT timestamp FROM gpsReadings WHERE name = 'alt'")
+         timestamp
+         timestamp = cur.fetchone()
+         if timestamp is not None:
           timestamp = float(timestamp[0])
     
-        if base_alt != -99 and current_alt != -100:
+         if base_alt != -99 and current_alt != -100:
             if (current_alt - 50) > base_alt:
              has_launched = true
              cur.execute("INSERT INTO flightChecks(name,hasHappened,timestamp) VALUES (?,?,?)", ("hasLaunched",true, timestamp))

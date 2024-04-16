@@ -6,7 +6,7 @@ import imufusion as imufusion
 import numpy as np
 import os as os
 from tkinter import *
-
+import threading
 
 get_time = lambda fn: os.path.getmtime(fn)
 
@@ -63,16 +63,19 @@ running_average_list = ["dhtTemp", "dhtHum", "bmeTemp", "bmeHum", "bmePres", "bm
 root = Tk()
 root.geometry("100x100")
 
+continuePlotting = False
+
+ 
+ 
 
 
 
 
 def ldr_voltage_to_lux(voltage_transmitted):
-    lux = 0
-    if voltage_transmitted != "":
-        voltage  = (float(voltage_transmitted)/4095) * 3.3
-        resistance = voltage/2 
-        lux = resistance * 10
+    actual_voltage = (voltage_transmitted/4095) * 3.3
+    r_2 = 7450
+    resistance = (3.3*(r_2)-actual_voltage*(r_2))/actual_voltage
+    lux = (pow((math.exp(11.7)/resistance), 1/(0.623)))
     return lux
 
 def lux_to_solar_irradiance(lux):
@@ -105,7 +108,7 @@ def logarithmic_sheer(low_down_wind_speed,wanted_height):
 
 def hall_effect_sensor_to_wind_speed(triggers): 
     time_difference = (transmitted_data_list[0][0] - last_ms)/1000
-    rotational_speed = triggers * (60/time_difference)
+    rotational_speed = int(triggers) * (60/time_difference)
     wind_speed_ms = 0.007 * (rotational_speed) + 0.22
     wind_speed_kh = (wind_speed_ms*3600)/1000
     
@@ -113,13 +116,16 @@ def hall_effect_sensor_to_wind_speed(triggers):
 
 def calculate_altitude(air_pressure):
     base_pres = 0
-    db = sql.connect("cansatReadings.db")
-    curr = db.cursor()
-    curr.execute("SELECT value FROM baseLineReadings where name = 'basePressure'")
-    base_pres = curr.fetchone()
-    if base_pres != None:
-        alt_met = (44330 * (1 - ((air_pressure)/(base_pres))**0.1903))
-        return alt_met
+    alt_met = 0
+    if air_pressure != '':
+        air_pressure = float(air_pressure)
+        db = sql.connect("cansatReadings.db")
+        curr = db.cursor()
+        curr.execute("SELECT value FROM baseLineReadings where name = 'basePressure'")
+        base_pres = curr.fetchone()
+        if base_pres != None and base_pres != 0:
+           alt_met = (44330 * (1 - ((air_pressure)/(base_pres))**0.1903))
+    return alt_met
 def update_imu_table(name, value,time,conn):
     cursor = conn.cursor()
     sql = "INSERT INTO imuReadings(name, value, timestamp) VALUES (?,?,?)"

@@ -120,13 +120,15 @@ def hall_effect_sensor_to_wind_speed(triggers):
 
 def calculate_altitude(air_pressure):
     base_pres = 0
-    db = sql.connect("cansatReadings.db")
-    curr = db.cursor()
-    curr.execute("SELECT value FROM baseLineReadings where name = 'basePressure'")
-    base_pres = curr.fetchone()
-    if base_pres != None:
-        alt_met = (44330 * (1 - ((air_pressure)/(base_pres))**0.1903))
-        return alt_met
+    if air_pressure != "":
+        air_pressure = float(air_pressure)
+        db = sql.connect("cansatReadings.db")
+        curr = db.cursor()
+        curr.execute("SELECT value FROM baseLineReadings where name = 'basePressure'")
+        base_pres = curr.fetchone()
+        if base_pres != None:
+             alt_met = (44330 * (1 - ((air_pressure)/(base_pres))**0.1903))
+             return alt_met
     return 0
 def update_imu_table(name, value,time,conn):
     cursor = conn.cursor()

@@ -1,9 +1,10 @@
 from tkinter import *
 import matplotlib
 matplotlib.use("TkAgg")
+import time
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
-
+import threading
 from matplotlib import pyplot as ply
 import sqlite3 as sql
 import numpy as np
@@ -43,6 +44,8 @@ x_axis_data_choice_rr_option = OptionMenu(root,  x_axis_data_choice_rr, *graph_d
 x_axis_data_choice_rr_label = Label(root, text = "X - Axis Data")
 y_axis_data_choice_rr_option = OptionMenu(root,  y_axis_data_choice_rr, *graph_data_choices)
 y_axis_data_choice_rr_label = Label(root, text = "Y - Axis Data")
+
+
 
 
 def make_reading_reading_graph(x_axis_data_name, y_axis_data_name, x_axis_label, y_axis_label, graph_label):
