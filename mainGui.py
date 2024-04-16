@@ -20,7 +20,7 @@ wind_speed_values = [21,22,23,24,25]
 light_intens_values = [26,27,28,29,30]
 time_values = [0,0,0,0,0]
 
-cansat_lat_long = [51.371641808232035, -0.2339994106653362]
+cansat_lat_long = [0,0]
 
 
 false = False
@@ -39,34 +39,24 @@ hasLandedLabel = Label(root, text = "Has Landed: " + str(has_landed))
 hasDeployedLabel = Label(root, text = "Has Deployed: " + str(has_deployed))
 hasLaunchedLabel = Label(root, text = "Has Launched: " + str(has_launched))
 
-
+coordsLabel = Label(root, text= "")
 
 root.geometry("600x400")
-map_widget = TkinterMapView(root, width= 300, height= 300)
-map_widget.grid(column = 6, row = 10)
-#cansat_marker = map_widget.set_position(cansat_lat_long[0], cansat_lat_long[1], marker= True)
 
-f = Figure(figsize=(5,4), dpi=100)
+
+f = Figure(figsize=(3,2), dpi=100)
 a = f.add_subplot(111)
 
 canvas = FigureCanvasTkAgg(f, master=root)
 canvas.draw()
-canvas.get_tk_widget().grid(row=1, column=0, ipadx=40, ipady=20)
+canvas.get_tk_widget().grid(row=8, column=1, ipadx=40, ipady=20)
 
 
 toolbarFrame = Frame(master=root)
-toolbarFrame.grid(row=2,column=0)
+toolbarFrame.grid(row=9,column=1)
 toolbar = NavigationToolbar2Tk(canvas, toolbarFrame)
 
 
-
-
-    
-    
-    
-    
-    
-    
 
 def animate_alt_graph(i):
     
@@ -208,13 +198,6 @@ def update_checks():
                     has_landed = true
                     cur.execute("INSERT INTO flightChecks(name,hasLanded,timestamp) VALUES (?,?,?)", ("hasDeployed",true, timestamp))
 
-                
-            
-    
-                
-            
-
-
 def display_table_titles():
     tempLabel = Label(root, text= "Temperature", borderwidth = 2, relief=  "solid")
     pressLabel = Label(root, text= "Pressure", borderwidth = 2, relief=  "solid")
@@ -223,7 +206,6 @@ def display_table_titles():
     windSpeedLabel = Label(root, text= "Wind Speed",  borderwidth= 2, relief=  "solid")
     lightIntensityLabel = Label(root, text= "Light Intensity", borderwidth= 2, relief=  "solid")
     timeLabel = Label(root, text= "Timestamp", borderwidth= 2, relief=  "solid")
-    
     
     tempLabel.grid(row = 0, column = 1, padx= 20)
     pressLabel.grid(row = 0, column = 2, padx= 20)
@@ -237,22 +219,38 @@ def update_cansat_position():
         db = sql.connect("cansatReadings.db")
         cur = db.cursor()
         
-        last_lat_value = cansat_lat_long[0]
-        last_long_value = cansat_lat_long[1]
         cur.execute('''SELECT value FROM gpsReadings WHERE name=?''',("lat",))
         last_lat_value = cur.fetchone()
-        cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("l",))
+        cur.execute('''SELECT value FROM regularReadings WHERE name=?''',("long",))
         last_long_value = cur.fetchone()
         
         if(last_lat_value != None):
-            cansat_lat_long[0] =last_lat_value
+            cansat_lat_long[0] =last_lat_value[0]
         if(last_long_value != None ):
-            cansat_lat_long[1] = last_long_value 
+            cansat_lat_long[1] = last_long_value[0]
         
-        print(cansat_lat_long)
-     #  cansat_marker.set_position(cansat_lat_long[0][0], cansat_lat_long[1])
-        time.sleep(1)
-        root.update()
+        coordsLabel.config(text = "Lat: " + str(cansat_lat_long[0]) + " Long: " + str(cansat_lat_long[1]))
+        coordsLabel.grid(column = 5, row = 6)
+
+def ema_lists(data_list):
+    print(data_list)
+    adjusted_list = []
+    if type(data_list[0]) is tuple:
+        adjusted_list.append(data_list[0][0])
+    else:
+        adjusted_list.append(data_list[0])
+    alpha = 0.7
+    for i in range(1, len(data_list)):
+        if type(adjusted_list[i-1]) is tuple:
+            previous_adjust_value = adjusted_list[i-1][0]
+        else:
+            previous_adjust_value = adjusted_list[i-1]
+        if type(data_list[i]) is tuple:
+            adjusted_list.append((alpha * data_list[i][0]) + (1 - alpha)*(previous_adjust_value))
+        else:
+            adjusted_list.append((alpha * data_list[i]) + (1 - alpha)*(previous_adjust_value))
+        
+    return adjusted_list
 
 def update_data_lists():
     db = sql.connect("cansatReadings.db")
@@ -280,6 +278,13 @@ def update_data_lists():
     cur.execute('''SELECT timestamp FROM regularReadings WHERE name=?''',("ldrLux",))
     all_time_values = cur.fetchall()
     
+    global temp_values
+    global press_values
+    global wind_speed_values
+    global humid_values
+    global alt_values   
+    global light_intens_values
+    
     for i in range(0,5):
         if len(all_temp_values) >= 5:
          temp_values[i] = all_temp_values[len(all_temp_values)-1-i]
@@ -301,6 +306,13 @@ def update_data_lists():
     for i in range(0,5):
         if len(all_time_values) >= 5:
          time_values[i] = all_time_values[len(all_time_values)-1-i]
+         
+         temp_values = ema_lists(temp_values)
+         press_values = ema_lists(press_values)
+         alt_values = ema_lists(alt_values)
+         humid_values = ema_lists(humid_values)
+         wind_speed_values = ema_lists(wind_speed_values)
+         light_intens_values = ema_lists(light_intens_values)
          
          
          
@@ -356,4 +368,5 @@ while True:
       update_cansat_position()
       update_checks()
       checks_display()
+      prev_time = t
     root.update()
